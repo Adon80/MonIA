@@ -1,1 +1,396 @@
+import streamlit as st
+import json
+import os
 
+# -----------------------------
+# CONFIGURATION
+# -----------------------------
+
+st.set_page_config(
+    page_title="MonAI",
+    page_icon="🤖",
+    layout="centered"
+)
+
+st.title("🤖 MonAI")
+st.caption("Ton assistant personnel avec mémoire 🧠")
+
+
+# -----------------------------
+# FICHIER DE MÉMOIRE
+# -----------------------------
+
+MEMORY_FILE = "memory.json"
+
+
+def charger_memoire():
+    """Charge la mémoire sauvegardée."""
+    if os.path.exists(MEMORY_FILE):
+        try:
+            with open(MEMORY_FILE, "r", encoding="utf-8") as fichier:
+                return json.load(fichier)
+        except:
+            return []
+
+    return []
+
+
+def sauvegarder_memoire(memoire):
+    """Sauvegarde la mémoire."""
+    with open(MEMORY_FILE, "w", encoding="utf-8") as fichier:
+        json.dump(
+            memoire,
+            fichier,
+            ensure_ascii=False,
+            indent=2
+        )
+
+
+# -----------------------------
+# INITIALISATION
+# -----------------------------
+
+if "memory" not in st.session_state:
+    st.session_state.memory = charger_memoire()
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+
+# -----------------------------
+# FONCTION AJOUT MÉMOIRE
+# -----------------------------
+
+def ajouter_souvenir(souvenir):
+
+    souvenir = souvenir.strip()
+
+    if not souvenir:
+        return False
+
+    if souvenir not in st.session_state.memory:
+
+        st.session_state.memory.append(souvenir)
+
+        sauvegarder_memoire(
+            st.session_state.memory
+        )
+
+        return True
+
+    return False
+
+
+# -----------------------------
+# BARRE LATÉRALE
+# -----------------------------
+
+with st.sidebar:
+
+    st.header("🧠 Mémoire")
+
+    st.write(
+        f"{len(st.session_state.memory)} souvenir(s)"
+    )
+
+    if st.session_state.memory:
+
+        for i, souvenir in enumerate(
+            st.session_state.memory,
+            start=1
+        ):
+
+            st.write(
+                f"**{i}.** {souvenir}"
+            )
+
+    else:
+
+        st.info(
+            "La mémoire est encore vide."
+        )
+
+    st.divider()
+
+    # Ajouter manuellement
+    st.subheader("➕ Ajouter")
+
+    nouveau_souvenir = st.text_input(
+        "Souvenir à mémoriser"
+    )
+
+    if st.button("💾 Mémoriser"):
+
+        if nouveau_souvenir.strip():
+
+            ajouter_souvenir(
+                nouveau_souvenir
+            )
+
+            st.success(
+                "Souvenir enregistré 🧠"
+            )
+
+            st.rerun()
+
+    # Effacer mémoire
+    if st.session_state.memory:
+
+        if st.button(
+            "🗑️ Effacer toute la mémoire"
+        ):
+
+            st.session_state.memory = []
+
+            sauvegarder_memoire([])
+
+            st.success(
+                "Mémoire effacée."
+            )
+
+            st.rerun()
+
+
+# -----------------------------
+# AFFICHER LA CONVERSATION
+# -----------------------------
+
+for message in st.session_state.messages:
+
+    with st.chat_message(
+        message["role"]
+    ):
+
+        st.write(
+            message["content"]
+        )
+
+
+# -----------------------------
+# CHAT
+# -----------------------------
+
+prompt = st.chat_input(
+    "Écris ton message..."
+)
+
+
+if prompt:
+
+    # Message utilisateur
+    st.session_state.messages.append(
+        {
+            "role": "user",
+            "content": prompt
+        }
+    )
+
+    with st.chat_message("user"):
+
+        st.write(prompt)
+
+
+    texte = prompt.lower().strip()
+
+
+    # -------------------------
+    # MÉMOIRE AUTOMATIQUE
+    # -------------------------
+
+    souvenir = None
+
+
+    # Nom
+    if "je m'appelle " in texte:
+
+        partie = prompt.split(
+            "je m'appelle ",
+            1
+        )[1]
+
+        souvenir = (
+            "Le prénom de l'utilisateur est "
+            + partie.strip()
+        )
+
+
+    elif "mon prénom est " in texte:
+
+        partie = prompt.split(
+            "mon prénom est ",
+            1
+        )[1]
+
+        souvenir = (
+            "Le prénom de l'utilisateur est "
+            + partie.strip()
+        )
+
+
+    # J'aime
+    elif "j'aime " in texte:
+
+        partie = prompt.split(
+            "j'aime ",
+            1
+        )[1]
+
+        souvenir = (
+            "L'utilisateur aime "
+            + partie.strip()
+        )
+
+
+    # Je préfère
+    elif "je préfère " in texte:
+
+        partie = prompt.split(
+            "je préfère ",
+            1
+        )[1]
+
+        souvenir = (
+            "L'utilisateur préfère "
+            + partie.strip()
+        )
+
+
+    # Mon objectif
+    elif "mon objectif est " in texte:
+
+        partie = prompt.split(
+            "mon objectif est ",
+            1
+        )[1]
+
+        souvenir = (
+            "L'objectif de l'utilisateur est "
+            + partie.strip()
+        )
+
+
+    # Je travaille
+    elif "je travaille " in texte:
+
+        partie = prompt.split(
+            "je travaille ",
+            1
+        )[1]
+
+        souvenir = (
+            "L'utilisateur travaille "
+            + partie.strip()
+        )
+
+
+    # Souviens-toi
+    elif "souviens-toi que " in texte:
+
+        partie = prompt.split(
+            "souviens-toi que ",
+            1
+        )[1]
+
+        souvenir = partie.strip()
+
+
+    # Enregistrer
+    if souvenir:
+
+        ajouter_souvenir(souvenir)
+
+
+    # -------------------------
+    # COMMANDES MÉMOIRE
+    # -------------------------
+
+    if (
+        "qu'est-ce que tu sais de moi"
+        in texte
+        or "que sais-tu de moi"
+        in texte
+        or "montre ma mémoire"
+        in texte
+        or "montre-moi ma mémoire"
+        in texte
+    ):
+
+        if st.session_state.memory:
+
+            response = (
+                "🧠 Voici ce que je sais de toi :\n\n"
+                + "\n".join(
+                    "• " + souvenir
+                    for souvenir
+                    in st.session_state.memory
+                )
+            )
+
+        else:
+
+            response = (
+                "🧠 Ma mémoire est encore vide."
+            )
+
+
+    # -------------------------
+    # SALUT
+    # -------------------------
+
+    elif (
+        "bonjour" in texte
+        or "salut" in texte
+        or "hello" in texte
+    ):
+
+        response = (
+            "Bonjour 👋 ! "
+            "Je suis MonAI 🤖"
+        )
+
+
+    # -------------------------
+    # QUI ES-TU ?
+    # -------------------------
+
+    elif (
+        "qui es-tu" in texte
+        or "qui es tu" in texte
+    ):
+
+        response = (
+            "Je suis MonAI 🤖, "
+            "ton assistant personnel. "
+            "Ma mémoire est en cours "
+            "d'amélioration 🧠."
+        )
+
+
+    # -------------------------
+    # RÉPONSE PAR DÉFAUT
+    # -------------------------
+
+    else:
+
+        response = (
+            "J'ai reçu ton message 👍\n\n"
+            "🧠 Si tu veux que je retienne "
+            "une information, tu peux écrire :\n"
+            "\"Souviens-toi que ...\""
+        )
+
+
+    # -------------------------
+    # AFFICHER RÉPONSE
+    # -------------------------
+
+    st.session_state.messages.append(
+        {
+            "role": "assistant",
+            "content": response
+        }
+    )
+
+    with st.chat_message("assistant"):
+
+        st.write(response)
